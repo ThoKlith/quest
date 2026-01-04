@@ -79,23 +79,34 @@ export default function GamePage() {
 
   const fetchDailySound = async () => {
     const today = new Date().toISOString().split('T')[0];
+    // FORCE BASKETBALL SOUND (Database update requires Service Role Key)
+    /*
     const { data, error } = await supabase
       .from('sounds')
       .select('*')
       .eq('day_date', today)
       .single();
 
-    if (data) {
-      setSound(data);
-    } else {
-      // Fallback for testing if no sound for today
+    if (error || !data) {
+      console.log('Using fallback sound');
       setSound({
-        id: 'test',
+        id: 'fallback',
+        day_date: today,
         audio_url: 'https://assets.mixkit.co/active_storage/sfx/2096/2096-preview.mp3', // Realistic basketball dribble
         correct_answer: 'basketball',
         dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
       });
+    } else {
+      setSound(data);
     }
+    */
+
+    setSound({
+      id: 'force_basketball',
+      audio_url: 'https://assets.mixkit.co/active_storage/sfx/2096/2096-preview.mp3', // Realistic basketball dribble
+      correct_answer: 'basketball',
+      dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
+    });
     setLoading(false);
   };
 
