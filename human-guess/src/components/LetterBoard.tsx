@@ -44,7 +44,7 @@ export default function LetterBoard({
 
         return (
             <motion.div
-                className="flex gap-x-2 gap-y-4 sm:gap-x-3 sm:gap-y-6 my-8 flex-wrap justify-center items-center max-w-4xl px-4 cursor-text"
+                className="flex gap-1 sm:gap-2 my-8 flex-nowrap justify-center items-center w-full max-w-4xl px-2 cursor-text"
                 onClick={handleContainerClick}
                 animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
                 transition={{ duration: 0.4 }}
@@ -53,19 +53,20 @@ export default function LetterBoard({
                     const isUnlocked = unlockedIndices.has(index);
                     let displayChar = '';
 
-                    // Base styles
-                    let containerStyle = "relative flex items-center justify-center w-12 h-16 sm:w-14 sm:h-20 rounded-xl border-2 transition-all duration-300 backdrop-blur-md overflow-hidden";
-                    let textStyle = "text-3xl sm:text-4xl font-black uppercase z-10";
+                    // Base styles - Dynamic sizing
+                    let containerStyle = "relative flex items-center justify-center flex-1 aspect-[3/4] max-w-[3.5rem] min-w-[1.5rem] rounded-lg sm:rounded-xl border-2 transition-all duration-300 backdrop-blur-md overflow-hidden";
+                    // Dynamic text size based on container
+                    let textStyle = "text-xl sm:text-3xl md:text-4xl font-black uppercase z-10 select-none";
 
                     if (isUnlocked) {
                         // UNLOCKED (Permanent) - "Jewel" Style
                         displayChar = char;
-                        containerStyle += " border-yellow-500 bg-gradient-to-br from-yellow-400/20 to-yellow-600/20 shadow-[0_0_25px_rgba(234,179,8,0.4)]";
+                        containerStyle += " border-yellow-500 bg-gradient-to-br from-yellow-400/20 to-yellow-600/20 shadow-[0_0_15px_rgba(234,179,8,0.4)]";
                         textStyle += " text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]";
                     } else if (userGuessIndex < userGuess.length) {
                         // USER TYPED - "Neon" Style
                         displayChar = userGuess[userGuessIndex];
-                        containerStyle += " border-blue-400 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.3)]";
+                        containerStyle += " border-blue-400 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.3)]";
                         textStyle += " text-white drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]";
                         userGuessIndex++;
                     } else {
@@ -90,7 +91,7 @@ export default function LetterBoard({
                             {!isUnlocked && userGuessIndex === userGuess.length && index === letters.findIndex((_, i) => !unlockedIndices.has(i) && i >= index) && (
                                 <motion.div
                                     layoutId="cursor"
-                                    className="absolute bottom-2 w-8 h-1 bg-blue-400/50 rounded-full"
+                                    className="absolute bottom-1 sm:bottom-2 w-1/2 h-0.5 sm:h-1 bg-blue-400/50 rounded-full"
                                     animate={{ opacity: [0.5, 1, 0.5] }}
                                     transition={{ duration: 1.5, repeat: Infinity }}
                                 />
