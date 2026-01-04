@@ -99,9 +99,11 @@ export default function GamePage() {
     setLoading(false);
   };
 
+  const [isShaking, setIsShaking] = useState(false);
+
   // Handle typing letters
   const handleType = (char: string) => {
-    if (isFinished || !sound) return;
+    if (isFinished || !sound || isShaking) return;
 
     const maxLength = sound.correct_answer.length;
     // Count how many slots are NOT unlocked
@@ -128,11 +130,12 @@ export default function GamePage() {
   };
 
   const handleBackspace = () => {
+    if (isShaking) return;
     setUserGuess(prev => prev.slice(0, -1));
   };
 
   const handleSubmit = () => {
-    if (isFinished || !sound) return;
+    if (isFinished || !sound || isShaking) return;
 
     const correctAnswer = sound.correct_answer.toUpperCase();
     const totalSlots = correctAnswer.length;
@@ -140,9 +143,9 @@ export default function GamePage() {
     const availableSlots = totalSlots - unlockedCount;
 
     if (userGuess.length !== availableSlots) {
-      // Shake animation or visual cue that word is incomplete?
-      // For now just return or alert
-      alert("Completa la parola prima di inviare!");
+      // Shake animation for incomplete word too?
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 500);
       return;
     }
 
@@ -161,19 +164,21 @@ export default function GamePage() {
     if (fullGuess === correctAnswer) {
       handleWin();
     } else {
-      // Wrong guess
-      alert("Tentativo errato!");
-      setUserGuess(''); // Reset only user typed letters
-      setWrongLetters(prev => { // We can still track wrong attempts count for stats if we want
+      // Wrong guess - Shake and Reset
+      setIsShaking(true);
+
+      // Add to wrong attempts for stats (optional)
+      setWrongLetters(prev => {
         const newSet = new Set(prev);
-        newSet.add(fullGuess); // Store the wrong word? Or just increment count?
-        // The previous logic used wrongLetters as a Set of chars. 
-        // Let's just use a counter or keep using wrongLetters but maybe store a unique ID for each wrong guess to count attempts?
-        // Or just change wrongLetters to be a number 'attempts'.
-        // For minimal refactor, let's just add a dummy value to wrongLetters to increase size.
         newSet.add(`ATTEMPT_${Date.now()}`);
         return newSet;
       });
+
+      // Wait for shake to finish before clearing
+      setTimeout(() => {
+        setIsShaking(false);
+        setUserGuess(''); // STRICT RESET: Clear only user typed letters
+      }, 500);
     }
   };
 
@@ -351,6 +356,7 @@ export default function GamePage() {
               unlockedIndices={unlockedIndices}
               userGuess={userGuess}
               onLetterGuess={handleLetterGuess}
+              isShaking={isShaking}
             />
             <div className="mt-6">
               <UnlockLetterButton
