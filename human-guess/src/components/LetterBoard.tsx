@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 interface LetterBoardProps {
@@ -16,7 +16,20 @@ export default function LetterBoard({
     onLetterGuess,
     disabled
 }: LetterBoardProps) {
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (disabled) return;
+
+            const key = event.key.toUpperCase();
+            if (/^[A-Z]$/.test(key)) {
+                onLetterGuess(key);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [disabled, onLetterGuess]);
 
     return (
         <div className="w-full max-w-2xl mx-auto mt-8 flex flex-col gap-6">
@@ -39,33 +52,19 @@ export default function LetterBoard({
                 ))}
             </div>
 
-            {/* Letter Buttons */}
-            <div className="grid grid-cols-7 gap-2 px-4">
-                {alphabet.map((letter) => {
-                    const isRevealed = revealedLetters.has(letter);
-                    const isWrong = wrongLetters.has(letter);
-                    const isUsed = isRevealed || isWrong;
-
-                    return (
-                        <motion.button
-                            key={letter}
-                            onClick={() => !isUsed && !disabled && onLetterGuess(letter)}
-                            disabled={isUsed || disabled}
-                            whileHover={!isUsed && !disabled ? { scale: 1.1 } : {}}
-                            whileTap={!isUsed && !disabled ? { scale: 0.95 } : {}}
-                            className={`
-                aspect-square rounded-lg font-bold text-sm sm:text-base transition-all
-                ${isRevealed ? 'bg-green-500/20 border-green-500 text-green-400 cursor-not-allowed' : ''}
-                ${isWrong ? 'bg-red-500/20 border-red-500 text-red-400 line-through cursor-not-allowed' : ''}
-                ${!isUsed && !disabled ? 'bg-white/5 border-gray-700 text-white hover:bg-white/10 hover:border-blue-500' : ''}
-                ${disabled && !isUsed ? 'opacity-50 cursor-not-allowed' : ''}
-                border-2
-              `}
-                        >
+            {/* Visual Feedback for Wrong Letters (Optional but helpful) */}
+            {wrongLetters.size > 0 && (
+                <div className="flex justify-center gap-2 flex-wrap px-4 mt-4">
+                    {Array.from(wrongLetters).map((letter, index) => (
+                        <span key={index} className="text-red-500 font-bold text-lg line-through opacity-50">
                             {letter}
-                        </motion.button>
-                    );
-                })}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            <div className="text-center text-gray-500 text-sm mt-4">
+                Digita sulla tastiera per indovinare
             </div>
         </div>
     );
