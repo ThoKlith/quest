@@ -1,138 +1,74 @@
-'use client';
-
-import { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LogIn, X, Chrome } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface AuthModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSuccess: () => void;
 }
 
-export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
-    const [isSignUp, setIsSignUp] = useState(false);
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-
-    async function handleAuth() {
-        setLoading(true);
-        setError('');
-
-        try {
-            if (isSignUp) {
-                const { error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                });
-                if (error) throw error;
-                alert('Check your email to confirm your account!');
-                onClose();
-            } else {
-                const { error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                });
-                if (error) throw error;
-                onSuccess();
-                onClose();
+export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+    const handleGoogleLogin = async () => {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: typeof window !== 'undefined' ? window.location.origin : ''
             }
-        } catch (err: any) {
-            setError(err.message || 'Authentication failed');
-        } finally {
-            setLoading(false);
-        }
-    }
+        });
+        if (error) alert(error.message);
+    };
 
     return (
         <AnimatePresence>
             {isOpen && (
-                <>
-                    {/* Backdrop */}
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                     />
 
-                    {/* Modal */}
-                    <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="glass-card p-8 max-w-md w-full space-y-6"
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        className="relative w-full max-w-sm glass p-8 border border-gray-800 text-center"
+                    >
+                        <button
+                            onClick={onClose}
+                            className="absolute top-4 right-4 text-gray-500 hover:text-white"
                         >
-                            <div className="text-center">
-                                <h2 className="text-3xl font-bold gradient-text mb-2">
-                                    {isSignUp ? 'Sign Up' : 'Sign In'}
-                                </h2>
-                                <p className="opacity-70 text-sm">
-                                    {isSignUp
-                                        ? 'Create an account to save your progress'
-                                        : 'Welcome back! Sign in to continue'}
-                                </p>
-                            </div>
+                            <X size={24} />
+                        </button>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm opacity-70 mb-2">Email</label>
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl glass-card border-0 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        placeholder="your@email.com"
-                                    />
-                                </div>
+                        <div className="w-16 h-16 bg-blue-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <LogIn className="text-blue-500" size={32} />
+                        </div>
 
-                                <div>
-                                    <label className="block text-sm opacity-70 mb-2">Password</label>
-                                    <input
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl glass-card border-0 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        placeholder="••••••••"
-                                    />
-                                </div>
+                        <h2 className="text-2xl font-black tracking-tighter uppercase mb-2">Salva i tuoi punti</h2>
+                        <p className="text-gray-400 text-sm mb-8">
+                            Accedi per comparire nella Hall of Fame e sfidare i tuoi amici ogni giorno.
+                        </p>
 
-                                {error && (
-                                    <div className="text-red-400 text-sm text-center">
-                                        {error}
-                                    </div>
-                                )}
+                        <button
+                            onClick={handleGoogleLogin}
+                            className="w-full bg-white text-black font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-200 transition-all transform active:scale-95"
+                        >
+                            <Chrome size={20} />
+                            CONTINUA CON GOOGLE
+                        </button>
 
-                                <button
-                                    onClick={handleAuth}
-                                    disabled={loading || !email || !password}
-                                    className="btn-primary w-full"
-                                >
-                                    {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
-                                </button>
-
-                                <button
-                                    onClick={() => setIsSignUp(!isSignUp)}
-                                    className="w-full text-sm opacity-70 hover:opacity-100 transition-opacity"
-                                >
-                                    {isSignUp
-                                        ? 'Already have an account? Sign in'
-                                        : "Don't have an account? Sign up"}
-                                </button>
-
-                                <div className="pt-4 border-t border-white/10">
-                                    <p className="text-xs opacity-60 text-center">
-                                        You can also continue as a guest, but your progress won&apos;t be saved across devices.
-                                    </p>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                </>
+                        <button
+                            onClick={onClose}
+                            className="mt-6 text-sm text-gray-500 hover:text-white font-medium"
+                        >
+                            Continua come ospite
+                        </button>
+                    </motion.div>
+                </div>
             )}
         </AnimatePresence>
     );
