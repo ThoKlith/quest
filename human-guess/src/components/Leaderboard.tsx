@@ -6,18 +6,19 @@ import { supabase } from '@/lib/supabase';
 interface LeaderboardProps {
     isOpen: boolean;
     onClose: () => void;
+    refreshTrigger?: number;
 }
 
-export default function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
+export default function Leaderboard({ isOpen, onClose, refreshTrigger }: LeaderboardProps) {
     const [scores, setScores] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [tab, setTab] = useState<'daily' | 'alltime'>('daily');
+    const [tab, setTab] = useState<'daily' | 'all-time'>('daily');
 
     useEffect(() => {
         if (isOpen) {
             fetchScores();
         }
-    }, [isOpen, tab]);
+    }, [isOpen, tab, refreshTrigger]);
 
     const fetchScores = async () => {
         setLoading(true);
@@ -100,8 +101,8 @@ export default function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
                                 OGGI
                             </button>
                             <button
-                                onClick={() => setTab('alltime')}
-                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'alltime' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-300'
+                                onClick={() => setTab('all-time')}
+                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'all-time' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-300'
                                     }`}
                             >
                                 ALL-TIME

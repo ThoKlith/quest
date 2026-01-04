@@ -33,6 +33,8 @@ export default function GamePage() {
   const [wrongLetters, setWrongLetters] = useState<Set<string>>(new Set());
   const [letterUnlocks, setLetterUnlocks] = useState(0);
 
+  const [lastGameTimestamp, setLastGameTimestamp] = useState<number>(0);
+
   useEffect(() => {
     setMounted(true);
     fetchDailySound();
@@ -89,7 +91,7 @@ export default function GamePage() {
       // Fallback for testing if no sound for today
       setSound({
         id: 'test',
-        audio_url: 'https://cdn.freesound.org/previews/366/366883_4934789-lq.mp3', // Basketball dribbling sound
+        audio_url: 'https://assets.mixkit.co/active_storage/sfx/2096/2096-preview.mp3', // Realistic basketball dribble
         correct_answer: 'basketball',
         dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
       });
@@ -103,9 +105,9 @@ export default function GamePage() {
     const upperLetter = letter.toUpperCase();
     const correctAnswer = sound.correct_answer.toUpperCase();
 
-    // Deduct 100 points for every letter guess (correct or wrong)
-    const newScore = Math.max(10, score - 100);
-    setScore(newScore);
+    // NO PENALTY for manual guesses
+    // const newScore = Math.max(10, score - 100);
+    // setScore(newScore);
 
     if (correctAnswer.includes(upperLetter)) {
       const newRevealed = new Set(revealedLetters);
@@ -157,8 +159,17 @@ export default function GamePage() {
   };
 
   const updateScore = (errors: number, unlocks: number, letterUnlocksCount: number = 0) => {
-    const penalty = (errors * 100) + (unlocks * 50) + (letterUnlocksCount * LETTER_UNLOCK_PENALTY);
-    const newScore = Math.max(10, 1000 - penalty);
+    const penalty = (errors * 0) + (unlocks * 50) + (letterUnlocksCount * LETTER_UNLOCK_PENALTY); // Errors no longer penalize score directly here if we want pure manual guess freedom, but let's keep logic consistent with request. 
+    // Wait, user said "non devi perdere punti mentre inserisci la lettera". 
+    // Current updateScore uses 'errors' which comes from wrongLetters.size.
+    // If I remove penalty from handleLetterGuess, I should also ensure updateScore doesn't penalize for errors if that's what they mean.
+    // But usually errors count at the end. 
+    // The user said "si perdono solo se compri la lettere o secondi di audio".
+    // So errors should NOT count towards score reduction?
+    // Let's adjust updateScore to ignore errors for penalty.
+
+    const penaltyCalculated = (unlocks * 50) + (letterUnlocksCount * LETTER_UNLOCK_PENALTY);
+    const newScore = Math.max(10, 1000 - penaltyCalculated);
     setScore(newScore);
   };
 
@@ -180,6 +191,8 @@ export default function GamePage() {
         attempts: wrongLetters.size + 1,
         unlocked_duration: AUDIO_STEPS[currentStep]
       });
+      // Trigger leaderboard refresh
+      setLastGameTimestamp(Date.now());
     }
   };
 
@@ -301,6 +314,7 @@ export default function GamePage() {
       <Leaderboard
         isOpen={isLeaderboardOpen}
         onClose={() => setIsLeaderboardOpen(false)}
+        refreshTrigger={lastGameTimestamp}
       />
 
       <AuthModal
