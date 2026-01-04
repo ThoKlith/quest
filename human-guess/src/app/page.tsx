@@ -79,8 +79,7 @@ export default function GamePage() {
 
   const fetchDailySound = async () => {
     const today = new Date().toISOString().split('T')[0];
-    // FORCE BASKETBALL SOUND (Database update requires Service Role Key)
-    /*
+
     const { data, error } = await supabase
       .from('sounds')
       .select('*')
@@ -91,7 +90,6 @@ export default function GamePage() {
       console.log('Using fallback sound');
       setSound({
         id: 'fallback',
-        day_date: today,
         audio_url: 'https://assets.mixkit.co/active_storage/sfx/2096/2096-preview.mp3', // Realistic basketball dribble
         correct_answer: 'basketball',
         dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
@@ -99,14 +97,6 @@ export default function GamePage() {
     } else {
       setSound(data);
     }
-    */
-
-    setSound({
-      id: 'force_basketball',
-      audio_url: 'https://assets.mixkit.co/active_storage/sfx/2096/2096-preview.mp3', // Realistic basketball dribble
-      correct_answer: 'basketball',
-      dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
-    });
     setLoading(false);
   };
 
