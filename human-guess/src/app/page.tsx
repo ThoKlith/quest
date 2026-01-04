@@ -29,10 +29,10 @@ export default function GamePage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
-  const [revealedLetters, setRevealedLetters] = useState<Set<string>>(new Set());
-  const [wrongLetters, setWrongLetters] = useState<Set<string>>(new Set());
+  const [unlockedIndices, setUnlockedIndices] = useState<Set<number>>(new Set());
+  const [userGuess, setUserGuess] = useState<string>('');
+  const [wrongLetters, setWrongLetters] = useState<Set<string>>(new Set()); // Tracks failed word attempts
   const [letterUnlocks, setLetterUnlocks] = useState(0);
-
   const [lastGameTimestamp, setLastGameTimestamp] = useState<number>(0);
 
   useEffect(() => {
@@ -99,30 +99,92 @@ export default function GamePage() {
     setLoading(false);
   };
 
-  const handleLetterGuess = (letter: string) => {
+  // Handle typing letters
+  const handleType = (char: string) => {
     if (isFinished || !sound) return;
 
-    const upperLetter = letter.toUpperCase();
+    const maxLength = sound.correct_answer.length;
+    // Count how many slots are NOT unlocked
+    // Actually, userGuess should just fill the "holes" conceptually, or just be a string that we map to empty slots?
+    // Simpler approach: userGuess represents the characters typed for the *remaining* slots? 
+    // OR userGuess is the full word attempt, but we skip over unlocked indices?
+    // Let's go with: userGuess is a string of characters typed by the user.
+    // When rendering, we merge unlockedIndices and userGuess.
+    // BUT, to make typing intuitive, we need to know how many "slots" are available.
+
+    // Let's say word is "BASKETBALL" (10 chars).
+    // Indices 0 ('B') and 2 ('S') are unlocked.
+    // User types 'A'. It should go to index 1.
+    // User types 'K'. It should go to index 3.
+
+    // So userGuess will store characters for the *empty* slots in order.
+    const totalSlots = maxLength;
+    const unlockedCount = unlockedIndices.size;
+    const availableSlots = totalSlots - unlockedCount;
+
+    if (userGuess.length < availableSlots) {
+      setUserGuess(prev => prev + char.toUpperCase());
+    }
+  };
+
+  const handleBackspace = () => {
+    setUserGuess(prev => prev.slice(0, -1));
+  };
+
+  const handleSubmit = () => {
+    if (isFinished || !sound) return;
+
     const correctAnswer = sound.correct_answer.toUpperCase();
+    const totalSlots = correctAnswer.length;
+    const unlockedCount = unlockedIndices.size;
+    const availableSlots = totalSlots - unlockedCount;
 
-    // NO PENALTY for manual guesses
-    // const newScore = Math.max(10, score - 100);
-    // setScore(newScore);
+    if (userGuess.length !== availableSlots) {
+      // Shake animation or visual cue that word is incomplete?
+      // For now just return or alert
+      alert("Completa la parola prima di inviare!");
+      return;
+    }
 
-    if (correctAnswer.includes(upperLetter)) {
-      const newRevealed = new Set(revealedLetters);
-      newRevealed.add(upperLetter);
-      setRevealedLetters(newRevealed);
-
-      // Check if word is complete
-      const allLettersRevealed = correctAnswer.split('').every(l => newRevealed.has(l));
-      if (allLettersRevealed) {
-        handleWin();
+    // Construct the full guess
+    let fullGuess = '';
+    let userGuessIndex = 0;
+    for (let i = 0; i < totalSlots; i++) {
+      if (unlockedIndices.has(i)) {
+        fullGuess += correctAnswer[i];
+      } else {
+        fullGuess += userGuess[userGuessIndex] || '';
+        userGuessIndex++;
       }
+    }
+
+    if (fullGuess === correctAnswer) {
+      handleWin();
     } else {
-      const newWrong = new Set(wrongLetters);
-      newWrong.add(upperLetter);
-      setWrongLetters(newWrong);
+      // Wrong guess
+      alert("Tentativo errato!");
+      setUserGuess(''); // Reset only user typed letters
+      setWrongLetters(prev => { // We can still track wrong attempts count for stats if we want
+        const newSet = new Set(prev);
+        newSet.add(fullGuess); // Store the wrong word? Or just increment count?
+        // The previous logic used wrongLetters as a Set of chars. 
+        // Let's just use a counter or keep using wrongLetters but maybe store a unique ID for each wrong guess to count attempts?
+        // Or just change wrongLetters to be a number 'attempts'.
+        // For minimal refactor, let's just add a dummy value to wrongLetters to increase size.
+        newSet.add(`ATTEMPT_${Date.now()}`);
+        return newSet;
+      });
+    }
+  };
+
+  // Map keyboard input to handleType
+  const handleLetterGuess = (key: string) => {
+    if (key === 'ENTER') {
+      handleSubmit();
+    } else if (key === 'BACKSPACE') {
+      handleBackspace();
+    } else if (/^[A-Z]$/.test(key.toUpperCase())) {
+      handleType(key);
     }
   };
 
@@ -130,21 +192,36 @@ export default function GamePage() {
     if (isFinished || !sound) return;
 
     const correctAnswer = sound.correct_answer.toUpperCase();
-    const unrevealedLetters = correctAnswer.split('').filter(l => !revealedLetters.has(l));
+    const totalLength = correctAnswer.length;
 
-    if (unrevealedLetters.length > 0) {
-      const randomLetter = unrevealedLetters[Math.floor(Math.random() * unrevealedLetters.length)];
-      const newRevealed = new Set(revealedLetters);
-      newRevealed.add(randomLetter);
-      setRevealedLetters(newRevealed);
+    // Find all indices that are NOT yet unlocked
+    const availableIndices: number[] = [];
+    for (let i = 0; i < totalLength; i++) {
+      if (!unlockedIndices.has(i)) {
+        availableIndices.push(i);
+      }
+    }
+
+    if (availableIndices.length > 0) {
+      const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+
+      const newUnlocked = new Set(unlockedIndices);
+      newUnlocked.add(randomIndex);
+      setUnlockedIndices(newUnlocked);
+
+      // If the user had typed a letter that would have gone into this slot (or shifted), 
+      // we might need to adjust userGuess? 
+      // Actually, if we unlock a letter, the number of 'available slots' decreases by 1.
+      // The user's current 'userGuess' string might now be too long or misaligned.
+      // Simplest UX: Clear user guess when buying a letter to avoid confusion.
+      setUserGuess('');
 
       const newUnlocks = letterUnlocks + 1;
       setLetterUnlocks(newUnlocks);
       updateScore(wrongLetters.size, currentStep, newUnlocks);
 
-      // Check if word is complete
-      const allLettersRevealed = correctAnswer.split('').every(l => newRevealed.has(l));
-      if (allLettersRevealed) {
+      // Check if word is complete (auto-win if all letters unlocked?)
+      if (newUnlocked.size === totalLength) {
         handleWin();
       }
     }
@@ -159,17 +236,8 @@ export default function GamePage() {
   };
 
   const updateScore = (errors: number, unlocks: number, letterUnlocksCount: number = 0) => {
-    const penalty = (errors * 0) + (unlocks * 50) + (letterUnlocksCount * LETTER_UNLOCK_PENALTY); // Errors no longer penalize score directly here if we want pure manual guess freedom, but let's keep logic consistent with request. 
-    // Wait, user said "non devi perdere punti mentre inserisci la lettera". 
-    // Current updateScore uses 'errors' which comes from wrongLetters.size.
-    // If I remove penalty from handleLetterGuess, I should also ensure updateScore doesn't penalize for errors if that's what they mean.
-    // But usually errors count at the end. 
-    // The user said "si perdono solo se compri la lettere o secondi di audio".
-    // So errors should NOT count towards score reduction?
-    // Let's adjust updateScore to ignore errors for penalty.
-
-    const penaltyCalculated = (unlocks * 50) + (letterUnlocksCount * LETTER_UNLOCK_PENALTY);
-    const newScore = Math.max(10, 1000 - penaltyCalculated);
+    const penalty = (errors * 0) + (unlocks * 50) + (letterUnlocksCount * LETTER_UNLOCK_PENALTY);
+    const newScore = Math.max(10, 1000 - penalty);
     setScore(newScore);
   };
 
@@ -280,8 +348,8 @@ export default function GamePage() {
           <>
             <LetterBoard
               word={sound?.correct_answer || ''}
-              revealedLetters={revealedLetters}
-              wrongLetters={wrongLetters}
+              unlockedIndices={unlockedIndices}
+              userGuess={userGuess}
               onLetterGuess={handleLetterGuess}
             />
             <div className="mt-6">
@@ -298,7 +366,7 @@ export default function GamePage() {
             className="mt-8 glass p-8 w-full max-w-md text-center border-green-500/30 bg-green-500/5"
           >
             <h2 className="text-3xl font-black text-green-400 mb-2">INDOVINATO!</h2>
-            <p className="text-gray-400 mb-6">Hai totalizzato {score} punti con {wrongLetters.size} errori!</p>
+            <p className="text-gray-400 mb-6">Hai totalizzato {score} punti con {wrongLetters.size} tentativi errati!</p>
             <button
               onClick={shareResult}
               className="w-full btn-primary flex items-center justify-center gap-2"
