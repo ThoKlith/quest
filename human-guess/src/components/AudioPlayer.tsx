@@ -13,50 +13,69 @@ export default function AudioPlayer({ audioUrl, maxDuration, onUnlock, canUnlock
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const startTimeRef = useRef<number | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (audioRef.current) {
             audioRef.current.src = audioUrl;
+            audioRef.current.loop = true; // Enable looping
         }
     }, [audioUrl]);
 
+    // Cleanup on unmount or maxDuration change
     useEffect(() => {
-        const audio = audioRef.current;
-        if (!audio) return;
-
-        const updateProgress = () => {
-            const current = audio.currentTime;
-            if (current >= maxDuration) {
-                audio.pause();
-                audio.currentTime = 0;
-                setIsPlaying(false);
-                setProgress(0);
-            } else {
-                setProgress((current / maxDuration) * 100);
+        return () => {
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
             }
-        };
-
-        audio.addEventListener('timeupdate', updateProgress);
-        audio.addEventListener('ended', () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+            }
             setIsPlaying(false);
             setProgress(0);
-        });
-
-        return () => {
-            audio.removeEventListener('timeupdate', updateProgress);
         };
     }, [maxDuration]);
+
+    const stopPlayback = () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+        }
+        setIsPlaying(false);
+        setProgress(0);
+        startTimeRef.current = null;
+    };
+
+    const updateProgress = () => {
+        if (!startTimeRef.current) return;
+
+        const elapsed = (Date.now() - startTimeRef.current) / 1000; // in seconds
+
+        if (elapsed >= maxDuration) {
+            stopPlayback();
+        } else {
+            setProgress((elapsed / maxDuration) * 100);
+            animationFrameRef.current = requestAnimationFrame(updateProgress);
+        }
+    };
 
     const togglePlay = () => {
         if (!audioRef.current) return;
 
         if (isPlaying) {
-            audioRef.current.pause();
+            stopPlayback();
         } else {
+            startTimeRef.current = Date.now();
             audioRef.current.currentTime = 0;
-            audioRef.current.play();
+            audioRef.current.play().catch(e => console.error("Playback failed:", e));
+            setIsPlaying(true);
+            animationFrameRef.current = requestAnimationFrame(updateProgress);
         }
-        setIsPlaying(!isPlaying);
     };
 
     return (
