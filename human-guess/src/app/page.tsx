@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import AudioPlayer from '@/components/AudioPlayer';
@@ -101,37 +101,12 @@ export default function GamePage() {
 
   const [isShaking, setIsShaking] = useState(false);
 
-  // Handle typing letters
-  const handleType = (char: string) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Handle typing letters (via hidden input)
+  const handleInputChange = (value: string) => {
     if (isFinished || !sound || isShaking) return;
-
-    const maxLength = sound.correct_answer.length;
-    // Count how many slots are NOT unlocked
-    // Actually, userGuess should just fill the "holes" conceptually, or just be a string that we map to empty slots?
-    // Simpler approach: userGuess represents the characters typed for the *remaining* slots? 
-    // OR userGuess is the full word attempt, but we skip over unlocked indices?
-    // Let's go with: userGuess is a string of characters typed by the user.
-    // When rendering, we merge unlockedIndices and userGuess.
-    // BUT, to make typing intuitive, we need to know how many "slots" are available.
-
-    // Let's say word is "BASKETBALL" (10 chars).
-    // Indices 0 ('B') and 2 ('S') are unlocked.
-    // User types 'A'. It should go to index 1.
-    // User types 'K'. It should go to index 3.
-
-    // So userGuess will store characters for the *empty* slots in order.
-    const totalSlots = maxLength;
-    const unlockedCount = unlockedIndices.size;
-    const availableSlots = totalSlots - unlockedCount;
-
-    if (userGuess.length < availableSlots) {
-      setUserGuess(prev => prev + char.toUpperCase());
-    }
-  };
-
-  const handleBackspace = () => {
-    if (isShaking) return;
-    setUserGuess(prev => prev.slice(0, -1));
+    setUserGuess(value);
   };
 
   const handleSubmit = () => {
@@ -143,7 +118,7 @@ export default function GamePage() {
     const availableSlots = totalSlots - unlockedCount;
 
     if (userGuess.length !== availableSlots) {
-      // Shake animation for incomplete word too?
+      // Shake animation for incomplete word
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 500);
       return;
@@ -167,7 +142,7 @@ export default function GamePage() {
       // Wrong guess - Shake and Reset
       setIsShaking(true);
 
-      // Add to wrong attempts for stats (optional)
+      // Add to wrong attempts for stats
       setWrongLetters(prev => {
         const newSet = new Set(prev);
         newSet.add(`ATTEMPT_${Date.now()}`);
@@ -177,19 +152,9 @@ export default function GamePage() {
       // Wait for shake to finish before clearing
       setTimeout(() => {
         setIsShaking(false);
-        setUserGuess(''); // STRICT RESET: Clear only user typed letters
+        setUserGuess(''); // STRICT RESET
+        inputRef.current?.focus(); // Refocus input
       }, 500);
-    }
-  };
-
-  // Map keyboard input to handleType
-  const handleLetterGuess = (key: string) => {
-    if (key === 'ENTER') {
-      handleSubmit();
-    } else if (key === 'BACKSPACE') {
-      handleBackspace();
-    } else if (/^[A-Z]$/.test(key.toUpperCase())) {
-      handleType(key);
     }
   };
 
@@ -214,12 +179,9 @@ export default function GamePage() {
       newUnlocked.add(randomIndex);
       setUnlockedIndices(newUnlocked);
 
-      // If the user had typed a letter that would have gone into this slot (or shifted), 
-      // we might need to adjust userGuess? 
-      // Actually, if we unlock a letter, the number of 'available slots' decreases by 1.
-      // The user's current 'userGuess' string might now be too long or misaligned.
-      // Simplest UX: Clear user guess when buying a letter to avoid confusion.
+      // Clear user guess to avoid misalignment
       setUserGuess('');
+      inputRef.current?.focus();
 
       const newUnlocks = letterUnlocks + 1;
       setLetterUnlocks(newUnlocks);
@@ -355,8 +317,10 @@ export default function GamePage() {
               word={sound?.correct_answer || ''}
               unlockedIndices={unlockedIndices}
               userGuess={userGuess}
-              onLetterGuess={handleLetterGuess}
+              onInputChange={handleInputChange}
+              onSubmit={handleSubmit}
               isShaking={isShaking}
+              inputRef={inputRef}
             />
             <div className="mt-6">
               <UnlockLetterButton
