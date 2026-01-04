@@ -89,9 +89,9 @@ export default function GamePage() {
       // Fallback for testing if no sound for today
       setSound({
         id: 'test',
-        audio_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        audio_url: 'https://cdn.freesound.org/previews/366/366883_4934789-lq.mp3', // Basketball dribbling sound
         correct_answer: 'basketball',
-        dictionary: ['basketball', 'soccer', 'tennis', 'rain', 'thunder']
+        dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
       });
     }
     setLoading(false);
