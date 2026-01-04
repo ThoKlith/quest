@@ -140,7 +140,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="p-4 text-center opacity-60 text-sm">
-        <p>A new question every day at midnight UTC 🌍</p>
+        <p>Made with ❤️ for Human Guessers • New question every day at midnight UTC 🌍</p>
       </footer>
 
       {/* Auth Modal */}
