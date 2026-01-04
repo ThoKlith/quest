@@ -44,7 +44,7 @@ export default function LetterBoard({
 
         return (
             <motion.div
-                className="flex gap-2 sm:gap-3 mb-8 flex-wrap justify-center max-w-4xl px-4 cursor-text"
+                className="flex gap-x-2 gap-y-4 sm:gap-x-3 sm:gap-y-6 my-8 flex-wrap justify-center items-center max-w-4xl px-4 cursor-text"
                 onClick={handleContainerClick}
                 animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : {}}
                 transition={{ duration: 0.4 }}
