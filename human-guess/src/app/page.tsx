@@ -220,13 +220,27 @@ export default function GamePage() {
 
     // Save score to leaderboard if user is logged in
     if (user && sound) {
-      await supabase.from('daily_scores').insert({
+      console.log('Attempting to save score:', {
+        user_id: user.id,
+        sound_id: sound.id,
+        points: score
+      });
+
+      const { error } = await supabase.from('daily_scores').insert({
         user_id: user.id,
         sound_id: sound.id,
         points: score,
         attempts: wrongLetters.size + 1,
         unlocked_duration: AUDIO_STEPS[currentStep]
       });
+
+      if (error) {
+        console.error('Error saving score:', error);
+        alert(`Errore salvataggio classifica: ${error.message}`);
+      } else {
+        console.log('Score saved successfully!');
+      }
+
       // Trigger leaderboard refresh
       setLastGameTimestamp(Date.now());
     }
