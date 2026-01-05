@@ -25,6 +25,7 @@ export default function GamePage() {
   const [isFinished, setIsFinished] = useState(false);
   const [score, setScore] = useState(1000);
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -81,31 +82,59 @@ export default function GamePage() {
     if (user) {
       await createProfileIfNotExists(user);
     }
+    setAuthLoading(false);
   };
 
-  // Check if user already played today
-  const checkAlreadyPlayed = async (userId: string, soundId: string) => {
-    const { data } = await supabase
-      .from('daily_scores')
-      .select('points')
-      .eq('user_id', userId)
-      .eq('sound_id', soundId)
-      .single();
+  // Check if user already played today (DB or LocalStorage)
+  const checkAlreadyPlayed = async (soundId: string, userId?: string) => {
+    let hasPlayed = false;
+    let score = 0;
 
-    if (data) {
+    // 1. Check DB if logged in
+    if (userId) {
+      const { data } = await supabase
+        .from('daily_scores')
+        .select('points')
+        .eq('user_id', userId)
+        .eq('sound_id', soundId)
+        .single();
+
+      if (data) {
+        hasPlayed = true;
+        score = data.points;
+      }
+    }
+
+    // 2. Check LocalStorage (fallback or guest)
+    if (!hasPlayed) {
+      const localData = typeof window !== 'undefined' ? localStorage.getItem(`played_${soundId}`) : null;
+      if (localData) {
+        try {
+          const parsed = JSON.parse(localData);
+          hasPlayed = true;
+          score = parsed.points;
+        } catch (e) { console.error('Error parsing local score', e); }
+      }
+    }
+
+    if (hasPlayed) {
+      console.log('User already played this sound', soundId);
       setAlreadyPlayed(true);
-      setTodayScore(data.points);
+      setTodayScore(score);
       setIsFinished(true);
+    } else {
+      setAlreadyPlayed(false);
+      setIsFinished(false);
     }
   };
 
   // Check when user logs in or sound loads
   useEffect(() => {
-    if (user && sound && sound.id !== 'fallback') {
-      console.log('Checking already played for:', user.id, sound.id);
-      checkAlreadyPlayed(user.id, sound.id);
+    if (sound && sound.id !== 'fallback' && !authLoading) {
+      console.log('Checking already played for sound:', sound.id);
+      checkAlreadyPlayed(sound.id, user?.id);
     }
-  }, [user, sound]);
+  }, [user, sound, authLoading]);
 
   const fetchDailySound = async () => {
     try {
@@ -323,6 +352,12 @@ export default function GamePage() {
         }
       }
 
+      // ALWAYS save to localStorage for redundancy and guest support
+      localStorage.setItem(`played_${sound.id}`, JSON.stringify({
+        points: score,
+        timestamp: Date.now()
+      }));
+
       // Trigger leaderboard refresh
       setLastGameTimestamp(Date.now());
     }
@@ -357,7 +392,7 @@ export default function GamePage() {
     }
   };
 
-  if (!mounted || loading) return (
+  if (!mounted || loading || authLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-black">
       <motion.div
         animate={{ rotate: 360 }}
