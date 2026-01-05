@@ -22,44 +22,56 @@ export default function Leaderboard({ isOpen, onClose, refreshTrigger }: Leaderb
 
     const fetchScores = async () => {
         setLoading(true);
+        try {
+            if (tab === 'daily') {
+                const urlParams = new URLSearchParams(window.location.search);
+                const testDate = urlParams.get('testDate');
+                const today = testDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
 
-        if (tab === 'daily') {
-            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+                // Get today's sound first
+                const { data: todaySound } = await supabase
+                    .from('sounds')
+                    .select('id')
+                    .eq('day_date', today)
+                    .single();
 
-            // Get today's sound first
-            const { data: todaySound } = await supabase
-                .from('sounds')
-                .select('id')
-                .eq('day_date', today)
-                .single();
+                if (todaySound) {
+                    const { data, error } = await supabase
+                        .from('daily_scores')
+                        .select(`
+                            points,
+                            attempts,
+                            guest_name,
+                            user_id,
+                            profiles (username, avatar_url)
+                        `)
+                        .eq('sound_id', todaySound.id)
+                        .order('points', { ascending: false })
+                        .order('attempts', { ascending: true })
+                        .limit(10);
 
-            if (todaySound) {
+                    if (error) throw error;
+                    if (data) setScores(data);
+                } else {
+                    setScores([]);
+                }
+            } else {
                 const { data, error } = await supabase
-                    .from('daily_scores')
-                    .select(`
-                        points,
-                        attempts,
-                        guest_name,
-                        user_id,
-                        profiles (username, avatar_url)
-                    `)
-                    .eq('sound_id', todaySound.id)
-                    .order('points', { ascending: false })
-                    .order('attempts', { ascending: true })
+                    .from('profiles')
+                    .select('username, total_points, avatar_url')
+                    .order('total_points', { ascending: false })
                     .limit(10);
 
+                if (error) throw error;
                 if (data) setScores(data);
             }
-        } else {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('username, total_points, avatar_url')
-                .order('total_points', { ascending: false })
-                .limit(10);
-
-            if (data) setScores(data);
+        } catch (error) {
+            console.error('Error fetching leaderboard:', error);
+            // Fallback empty scores on error
+            setScores([]);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (

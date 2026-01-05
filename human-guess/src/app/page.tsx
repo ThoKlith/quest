@@ -99,9 +99,10 @@ export default function GamePage() {
     }
   };
 
-  // Check already played when user and sound are ready
+  // Check when user logs in or sound loads
   useEffect(() => {
     if (user && sound && sound.id !== 'fallback') {
+      console.log('Checking already played for:', user.id, sound.id);
       checkAlreadyPlayed(user.id, sound.id);
     }
   }, [user, sound]);
