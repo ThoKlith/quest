@@ -231,19 +231,43 @@ export default function GamePage() {
         points: score
       });
 
-      const { error } = await supabase.from('daily_scores').insert({
-        user_id: user.id,
-        sound_id: sound.id,
-        points: score,
-        attempts: wrongLetters.size + 1,
-        unlocked_duration: AUDIO_STEPS[currentStep]
-      });
+      // Check if user already played today
+      const { data: existingScore } = await supabase
+        .from('daily_scores')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('sound_id', sound.id)
+        .single();
 
-      if (error) {
-        console.error('Error saving score:', error);
-        alert(`Errore salvataggio classifica: ${error.message}`);
+      if (existingScore) {
+        console.log('User already played today');
+        alert('Hai già giocato oggi! Torna domani per un nuovo suono. 🎮');
       } else {
-        console.log('Score saved successfully!');
+        // Insert daily score
+        const { error: scoreError } = await supabase.from('daily_scores').insert({
+          user_id: user.id,
+          sound_id: sound.id,
+          points: score,
+          attempts: wrongLetters.size + 1,
+          unlocked_duration: AUDIO_STEPS[currentStep]
+        });
+
+        if (scoreError) {
+          console.error('Error saving score:', scoreError);
+          alert(`Errore salvataggio classifica: ${scoreError.message}`);
+        } else {
+          console.log('Score saved successfully!');
+
+          // Update total_points in profiles
+          const { error: updateError } = await supabase.rpc('increment_total_points', {
+            user_id: user.id,
+            points_to_add: score
+          });
+
+          if (updateError) {
+            console.error('Error updating total points:', updateError);
+          }
+        }
       }
 
       // Trigger leaderboard refresh
