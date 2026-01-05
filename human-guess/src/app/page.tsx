@@ -108,8 +108,16 @@ export default function GamePage() {
 
   const fetchDailySound = async () => {
     try {
-      // Use Italian time for the date
-      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+      // Check for test date in URL (e.g., ?testDate=2026-01-07)
+      const urlParams = new URLSearchParams(window.location.search);
+      const testDate = urlParams.get('testDate');
+
+      // Use test date if provided, otherwise use Italian time
+      const today = testDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+
+      if (testDate) {
+        console.log('🧪 TEST MODE: Using date', testDate);
+      }
 
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) =>
@@ -121,6 +129,7 @@ export default function GamePage() {
         .select('*')
         .eq('day_date', today)
         .single();
+
 
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
