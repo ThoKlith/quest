@@ -24,7 +24,7 @@ export default function Leaderboard({ isOpen, onClose, refreshTrigger }: Leaderb
         setLoading(true);
 
         if (tab === 'daily') {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
 
             // Get today's sound first
             const { data: todaySound } = await supabase

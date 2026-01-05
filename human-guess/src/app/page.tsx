@@ -75,10 +75,14 @@ export default function GamePage() {
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
+    if (user) {
+      await createProfileIfNotExists(user);
+    }
   };
 
   const fetchDailySound = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    // Use Italian time for the date
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
 
     const { data, error } = await supabase
       .from('sounds')
@@ -94,6 +98,7 @@ export default function GamePage() {
         correct_answer: 'basketball',
         dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
       });
+      // Optional: Add a visual toast/alert here if you want to notify the user they are in practice mode
     } else {
       setSound(data);
     }
@@ -218,8 +223,8 @@ export default function GamePage() {
       colors: ['#3b82f6', '#10b981', '#ffffff']
     });
 
-    // Save score to leaderboard if user is logged in
-    if (user && sound) {
+    // Save score only if user is logged in AND it's not the fallback sound
+    if (user && sound && sound.id !== 'fallback') {
       console.log('Attempting to save score:', {
         user_id: user.id,
         sound_id: sound.id,
@@ -287,6 +292,11 @@ export default function GamePage() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white px-6 py-12 flex flex-col items-center">
+      {sound?.id === 'fallback' && (
+        <div className="fixed top-0 left-0 w-full bg-yellow-600/20 text-yellow-500 text-xs font-bold text-center py-1 z-50 border-b border-yellow-600/30">
+          MODALITÀ PRATICA (Audio non disponibile per oggi)
+        </div>
+      )}
       {/* Header */}
       <div className="w-full max-w-2xl flex justify-between items-center mb-12">
         <div className="flex items-center gap-2">
