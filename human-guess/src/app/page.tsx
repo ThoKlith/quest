@@ -34,6 +34,9 @@ export default function GamePage() {
   const [wrongLetters, setWrongLetters] = useState<Set<string>>(new Set()); // Tracks failed word attempts
   const [letterUnlocks, setLetterUnlocks] = useState(0);
   const [lastGameTimestamp, setLastGameTimestamp] = useState<number>(0);
+  const [alreadyPlayed, setAlreadyPlayed] = useState(false);
+  const [todayScore, setTodayScore] = useState<number | null>(null);
+
 
   useEffect(() => {
     setMounted(true);
@@ -79,6 +82,29 @@ export default function GamePage() {
       await createProfileIfNotExists(user);
     }
   };
+
+  // Check if user already played today
+  const checkAlreadyPlayed = async (userId: string, soundId: string) => {
+    const { data } = await supabase
+      .from('daily_scores')
+      .select('points')
+      .eq('user_id', userId)
+      .eq('sound_id', soundId)
+      .single();
+
+    if (data) {
+      setAlreadyPlayed(true);
+      setTodayScore(data.points);
+      setIsFinished(true);
+    }
+  };
+
+  // Check already played when user and sound are ready
+  useEffect(() => {
+    if (user && sound && sound.id !== 'fallback') {
+      checkAlreadyPlayed(user.id, sound.id);
+    }
+  }, [user, sound]);
 
   const fetchDailySound = async () => {
     try {
@@ -340,10 +366,8 @@ export default function GamePage() {
       )}
       {/* Header */}
       <div className="w-full max-w-2xl flex justify-between items-center mb-12">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <Share2 size={20} />
-          </div>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Soundle" className="w-10 h-10 rounded-xl shadow-lg" />
           <h1 className="text-2xl font-black tracking-tighter">SOUNDLE</h1>
         </div>
         <div className="flex gap-3 items-center">
@@ -399,17 +423,34 @@ export default function GamePage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="mt-8 glass p-8 w-full max-w-md text-center border-green-500/30 bg-green-500/5"
+            className={`mt-8 glass p-8 w-full max-w-md text-center ${alreadyPlayed ? 'border-blue-500/30 bg-blue-500/5' : 'border-green-500/30 bg-green-500/5'}`}
           >
-            <h2 className="text-3xl font-black text-green-400 mb-2">INDOVINATO!</h2>
-            <p className="text-gray-400 mb-6">Hai totalizzato {score} punti con {wrongLetters.size} tentativi errati!</p>
-            <button
-              onClick={shareResult}
-              className="w-full btn-primary flex items-center justify-center gap-2"
-            >
-              <Share2 size={20} />
-              CONDIVIDI RISULTATO
-            </button>
+            {alreadyPlayed ? (
+              <>
+                <h2 className="text-3xl font-black text-blue-400 mb-2">GIÀ GIOCATO!</h2>
+                <p className="text-gray-400 mb-4">Hai totalizzato <span className="text-blue-400 font-bold">{todayScore}</span> punti oggi.</p>
+                <p className="text-gray-500 text-sm mb-6">Torna domani per un nuovo suono! 🎧</p>
+                <button
+                  onClick={() => setIsLeaderboardOpen(true)}
+                  className="w-full btn-primary flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500"
+                >
+                  <Trophy size={20} />
+                  VEDI CLASSIFICA
+                </button>
+              </>
+            ) : (
+              <>
+                <h2 className="text-3xl font-black text-green-400 mb-2">INDOVINATO!</h2>
+                <p className="text-gray-400 mb-6">Hai totalizzato {score} punti con {wrongLetters.size} tentativi errati!</p>
+                <button
+                  onClick={shareResult}
+                  className="w-full btn-primary flex items-center justify-center gap-2"
+                >
+                  <Share2 size={20} />
+                  CONDIVIDI RISULTATO
+                </button>
+              </>
+            )}
           </motion.div>
         )}
 
