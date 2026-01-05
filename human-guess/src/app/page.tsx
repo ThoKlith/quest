@@ -78,13 +78,25 @@ export default function GamePage() {
   };
 
   const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-    if (user) {
-      await createProfileIfNotExists(user);
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Auth check error:', error);
+      }
+      setUser(session?.user ?? null);
+    } catch (e) {
+      console.error('Unexpected auth check error:', e);
+    } finally {
+      setAuthLoading(false);
     }
-    setAuthLoading(false);
   };
+
+  // Clean URL hash on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   // Check if user already played today (DB or LocalStorage)
   const checkAlreadyPlayed = async (soundId: string, userId?: string) => {
