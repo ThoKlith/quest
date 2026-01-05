@@ -368,7 +368,8 @@ export default function GamePage() {
       <div className="w-full max-w-2xl flex justify-between items-center mb-12">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="Soundle" className="w-10 h-10 rounded-xl shadow-lg" />
-          <h1 className="text-2xl font-black tracking-tighter">SOUNDLE</h1>
+          <h1 className="text-2xl font-[var(--font-outfit)] font-black tracking-tight bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">SOUNDLE</h1>
+
         </div>
         <div className="flex gap-3 items-center">
           <button
