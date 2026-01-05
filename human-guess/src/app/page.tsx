@@ -26,6 +26,7 @@ export default function GamePage() {
   const [score, setScore] = useState(1000);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -151,7 +152,7 @@ export default function GamePage() {
 
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout')), 8000)
+        setTimeout(() => reject(new Error('Timeout')), 15000)
       );
 
       const fetchPromise = supabase
@@ -164,24 +165,14 @@ export default function GamePage() {
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
       if (error || !data) {
-        console.log('Using fallback sound:', error?.message || 'No data');
-        setSound({
-          id: 'fallback',
-          audio_url: 'https://assets.mixkit.co/active_storage/sfx/2096/2096-preview.mp3',
-          correct_answer: 'basketball',
-          dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
-        });
+        console.error('Error fetching sound:', error);
+        setFetchError(true);
       } else {
         setSound(data);
       }
     } catch (err) {
       console.error('Failed to fetch sound:', err);
-      setSound({
-        id: 'fallback',
-        audio_url: 'https://assets.mixkit.co/active_storage/sfx/2096/2096-preview.mp3',
-        correct_answer: 'basketball',
-        dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
-      });
+      setFetchError(true);
     }
     setLoading(false);
   };
@@ -402,13 +393,21 @@ export default function GamePage() {
     </div>
   );
 
+  if (fetchError) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6 text-center">
+      <h1 className="text-2xl font-bold text-red-500 mb-4">Errore Caricamento</h1>
+      <p className="text-gray-400 mb-6">Impossibile caricare il suono del giorno.</p>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-6 py-3 bg-blue-600 rounded-xl font-bold hover:bg-blue-500 transition-all"
+      >
+        Riprova
+      </button>
+    </div>
+  );
+
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white px-6 py-12 flex flex-col items-center">
-      {sound?.id === 'fallback' && (
-        <div className="fixed top-0 left-0 w-full bg-yellow-600/20 text-yellow-500 text-xs font-bold text-center py-1 z-50 border-b border-yellow-600/30">
-          MODALITÀ PRATICA (Audio non disponibile per oggi)
-        </div>
-      )}
       {/* Header */}
       <div className="w-full max-w-2xl flex justify-between items-center mb-12">
         <div className="flex items-center gap-3">
