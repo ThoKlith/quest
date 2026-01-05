@@ -81,29 +81,46 @@ export default function GamePage() {
   };
 
   const fetchDailySound = async () => {
-    // Use Italian time for the date
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+    try {
+      // Use Italian time for the date
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
 
-    const { data, error } = await supabase
-      .from('sounds')
-      .select('*')
-      .eq('day_date', today)
-      .single();
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), 8000)
+      );
 
-    if (error || !data) {
-      console.log('Using fallback sound');
+      const fetchPromise = supabase
+        .from('sounds')
+        .select('*')
+        .eq('day_date', today)
+        .single();
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+      if (error || !data) {
+        console.log('Using fallback sound:', error?.message || 'No data');
+        setSound({
+          id: 'fallback',
+          audio_url: 'https://assets.mixkit.co/active_storage/sfx/2096/2096-preview.mp3',
+          correct_answer: 'basketball',
+          dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
+        });
+      } else {
+        setSound(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch sound:', err);
       setSound({
         id: 'fallback',
-        audio_url: 'https://assets.mixkit.co/active_storage/sfx/2096/2096-preview.mp3', // Realistic basketball dribble
+        audio_url: 'https://assets.mixkit.co/active_storage/sfx/2096/2096-preview.mp3',
         correct_answer: 'basketball',
         dictionary: ['basketball', 'court', 'dribble', 'hoop', 'net', 'referee', 'foul', 'timeout']
       });
-      // Optional: Add a visual toast/alert here if you want to notify the user they are in practice mode
-    } else {
-      setSound(data);
     }
     setLoading(false);
   };
+
 
   const [isShaking, setIsShaking] = useState(false);
 
